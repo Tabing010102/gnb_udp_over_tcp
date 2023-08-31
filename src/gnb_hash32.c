@@ -26,7 +26,50 @@ typedef struct _gnb_hash32_bucket_t{
 }gnb_hash32_bucket_t;
 
 
-uint32_t murmurhash_hash(unsigned char *data, size_t len);
+// uint32_t murmurhash_hash(unsigned char *data, size_t len);
+// from https://github.com/gnbdev/opengnb/blob/414b1fce9a8a74085da946e45972fb41914966a3/libs/hash/murmurhash.c#L5
+//from nginx source code
+uint32_t murmurhash_hash(unsigned char *data, size_t len){
+
+    uint32_t  h, k;
+
+    h = 0 ^ (uint32_t)len;
+
+    while (len >= 4) {
+        k  = data[0];
+        k |= data[1] << 8;
+        k |= data[2] << 16;
+        k |= data[3] << 24;
+
+        k *= 0x5bd1e995;
+        k ^= k >> 24;
+        k *= 0x5bd1e995;
+
+        h *= 0x5bd1e995;
+        h ^= k;
+
+        data += 4;
+        len -= 4;
+    }
+
+    switch (len) {
+    case 3:
+        h ^= data[2] << 16;
+        /* fall through */
+    case 2:
+        h ^= data[1] << 8;
+        /* fall through */
+    case 1:
+        h ^= data[0];
+        h *= 0x5bd1e995;
+    }
+
+    h ^= h >> 13;
+    h *= 0x5bd1e995;
+    h ^= h >> 15;
+
+    return h;
+}
 
 
 gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num, uint32_t kv_num){
@@ -124,6 +167,8 @@ void gnb_kv32_release(gnb_hash32_map_t *hash_map, gnb_kv32_t *kv){
 
 }
 
+gnb_kv32_t *kv_chain;
+gnb_kv32_t *pre_kv_chain;
 
 gnb_kv32_t *gnb_hash32_set(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len, void *value, uint32_t value_len){
 
@@ -143,8 +188,8 @@ gnb_kv32_t *gnb_hash32_set(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
         goto finish;
     }
 
-    gnb_kv32_t *kv_chain = bucket->kv_chain;
-    gnb_kv32_t *pre_kv_chain = kv_chain;
+    kv_chain = bucket->kv_chain;
+    pre_kv_chain = kv_chain;
 
     do{
     
@@ -207,8 +252,8 @@ int gnb_hash32_store(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len
         goto finish;
     }
 
-    gnb_kv32_t *kv_chain = bucket->kv_chain;
-    gnb_kv32_t *pre_kv_chain = kv_chain;
+    kv_chain = bucket->kv_chain;
+    pre_kv_chain = kv_chain;
     
     do{
         
@@ -267,7 +312,7 @@ gnb_kv32_t *gnb_hash32_get(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
         goto finish;
     }
 
-    gnb_kv32_t *kv_chain = bucket->kv_chain;
+    kv_chain = bucket->kv_chain;
 
     do{
     
@@ -306,7 +351,7 @@ gnb_kv32_t *gnb_hash32_del(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
         goto finish;
     }
 
-    gnb_kv32_t *kv_chain = bucket->kv_chain;
+    kv_chain = bucket->kv_chain;
     
     if ( !memcmp(kv_chain->key->data, key, key_len) ) {
 
@@ -325,7 +370,7 @@ gnb_kv32_t *gnb_hash32_del(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
 
     }
     
-    gnb_kv32_t *pre_kv_chain = kv_chain;
+    pre_kv_chain = kv_chain;
     
     kv_chain = kv_chain->nex;
     

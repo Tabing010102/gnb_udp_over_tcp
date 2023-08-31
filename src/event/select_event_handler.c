@@ -136,7 +136,7 @@ static int set_event ( gnb_event_cmd *event_cmd, gnb_event_t *ev, int op, int ev
 
 }
 
-
+gnb_event_t *last_event;
 
 static int del_event ( gnb_event_cmd *event_cmd, gnb_event_t *ev ) {
 
@@ -151,7 +151,7 @@ static int del_event ( gnb_event_cmd *event_cmd, gnb_event_t *ev ) {
     }
 
     /* ************************************ */
-    gnb_event_t *last_event = handler_ctx->event_array->list[ handler_ctx->event_array->nevent-1 ];
+    last_event = handler_ctx->event_array->list[ handler_ctx->event_array->nevent-1 ];
     last_event->index = ev->index;
     handler_ctx->event_array->list[ last_event->index ] = last_event;
     handler_ctx->event_array->nevent--;

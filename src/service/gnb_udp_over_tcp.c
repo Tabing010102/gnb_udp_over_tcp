@@ -3,7 +3,6 @@
 #include <string.h>
 #include <getopt.h>
 
-#include "gnb_platform.h"
 #include "gnb_network_service.h"
 #include "gnb_udp_over_tcp.h"
 
@@ -23,7 +22,6 @@
 #define SET_FILE_LOG_LEVEL           0x2E
 #define SET_UDP_LOG_LEVEL            0x2F
 
-int gnb_daemon();
 
 extern gnb_network_service_t uot_udp_service_mod;
 extern gnb_network_service_t uot_tcp_service_mod;
@@ -31,7 +29,7 @@ extern gnb_network_service_t uot_tcp_service_mod;
 
 static void show_useage(int argc,char *argv[]){
 
-    printf("GNB udp over tcp Service version 1.2.1 protocol version 1.2.1\n");
+    printf("GNB udp over tcp Service version 1.1.0 protocol version 1.0.0\n");
     printf("Build[%s %s]\n",__DATE__,__TIME__);
     printf("Copyright (C) 2020 gnbdev\n");
     printf("Usage: %s [-u] [-t]\n", argv[0]);
@@ -42,36 +40,28 @@ static void show_useage(int argc,char *argv[]){
 
     printf("  -l, --listen              listen port\n");
 
-    #ifdef __UNIX_LIKE_OS__
-    printf("  -d, --daemon              daemon\n");
-    #endif
-
-    printf("      --log-udp4            send log to the address ipv4 default is '127.0.0.1:6000'\n");
+    printf("      --log-udp4            send log to the address ipv4 default is '127.0.0.1:9801'\n");
     printf("      --log-udp-type        the log udp type 'binary' or 'text' default is 'binary'\n");
 
     printf("      --log-console-level   log-console-level 0-3\n");
     printf("      --log-file-level      log-file-level    0-3\n" );
     printf("      --log-udp-level       log-udp-level     0-3\n");
-    printf("      --verbose             verbose mode\n");
+
     printf("      --help\n");
 
     printf("example:\n");
-    printf("%s -u -l $listen_udp_port $tcp_address $tcp_port\n",    argv[0]);
-    printf("%s -t -l $listen_tcp_port $des_address $des_udp_port\n",argv[0]);
+    printf("%s -u -l listen_udp_port tcp_address tcp_port\n",    argv[0]);
+    printf("%s -t -l listen_tcp_port des_address des_udp_port\n",argv[0]);
 
 }
 
 
 
-static void setup_log_ctx(udp_over_tcp_service_conf_t *conf, gnb_log_ctx_t *log, char *log_path, char *log_udp_sockaddress4_string, uint8_t log_console_level, uint8_t log_file_level, uint8_t log_udp_level){
+static void setup_log_ctx(gnb_log_ctx_t *log, char *log_path, char *log_udp_sockaddress4_string, uint8_t log_console_level, uint8_t log_file_level, uint8_t log_udp_level){
 
     int rc;
 
     log->output_type = GNB_LOG_OUTPUT_STDOUT;
-
-    if ( 0!=conf->daemon ) {
-        log->output_type = GNB_LOG_OUTPUT_NONE;
-    }
 
     if ( NULL != log_path ) {
 
@@ -117,12 +107,11 @@ static void setup_log_ctx(udp_over_tcp_service_conf_t *conf, gnb_log_ctx_t *log,
 }
 
 
+
 int main (int argc,char *argv[]){
 
     int udp_opt  = 0;
     int tcp_opt  = 0;
-
-    int verbose_opt = 0;
 
     char     *address = NULL;
     uint16_t   port   = 0;
@@ -134,9 +123,6 @@ int main (int argc,char *argv[]){
     uint8_t log_udp_type;
 
     char *log_path = NULL;
-
-    gnb_log_ctx_t *log;
-    gnb_network_service_t *service;
 
     udp_over_tcp_service_conf_t *udp_over_tcp_service_conf;
 
@@ -156,10 +142,6 @@ int main (int argc,char *argv[]){
 
       { "listen",               required_argument, 0, 'l' },
 
-      #ifdef __UNIX_LIKE_OS__
-      { "daemon",               no_argument,   0, 'd' },
-      #endif
-
       { "log-file-path",        required_argument,  0, SET_LOG_FILE_PATH },
 
       { "log-udp6",             optional_argument,  &flag, LOG_UDP6 },
@@ -170,7 +152,6 @@ int main (int argc,char *argv[]){
       { "log-file-level",       required_argument,  0,   SET_FILE_LOG_LEVEL },
       { "log-udp-level",        required_argument,  0,   SET_UDP_LOG_LEVEL },
 
-      { "verbose",              no_argument, 0, 'V' },
       { "help",                 no_argument, 0, 'h' },
 
       { 0, 0, 0, 0 }
@@ -183,7 +164,7 @@ int main (int argc,char *argv[]){
 
         int option_index = 0;
 
-        opt = getopt_long (argc, argv, "l:utdVh",long_options, &option_index);
+        opt = getopt_long (argc, argv, "l:uth",long_options, &option_index);
 
         if ( opt == -1 ) {
             break;
@@ -195,18 +176,14 @@ int main (int argc,char *argv[]){
             udp_over_tcp_service_conf->listen_port = (uint16_t)strtol(optarg, NULL, 0);
             break;
 
-        #ifdef __UNIX_LIKE_OS__
-        case 'd':
-            udp_over_tcp_service_conf->daemon = 1;
-            break;
-        #endif
-
         case 'u':
             udp_opt = 1;
+
             break;
 
         case 't':
             tcp_opt = 1;
+
             break;
 
         case SET_LOG_FILE_PATH:
@@ -235,18 +212,15 @@ int main (int argc,char *argv[]){
             log_udp_level     = (uint8_t)strtoul(optarg, NULL, 10);
             break;
 
-        case 'V':
-            verbose_opt = 1;
-            break;
-
         case 'h':
             show_useage(argc,argv);
             exit(0);
 
         default:
-            break;
 
+            break;
         }
+
 
         if ( 0 == opt ) {
 
@@ -257,7 +231,7 @@ int main (int argc,char *argv[]){
                 if ( NULL != optarg ) {
                     snprintf(log_udp_sockaddress4_string, 16 + 1 + sizeof("65535"), "%s", optarg);
                 } else {
-                    snprintf(log_udp_sockaddress4_string, 16 + 1 + sizeof("65535"), "%s", "127.0.0.1:6000");
+                    snprintf(log_udp_sockaddress4_string, 16 + 1 + sizeof("65535"), "%s", "127.0.0.1:9801");
                 }
 
                 break;
@@ -270,6 +244,7 @@ int main (int argc,char *argv[]){
 
         }
 
+
     }
 
 
@@ -278,10 +253,14 @@ int main (int argc,char *argv[]){
         exit(0);
     }
 
+
     if ( (optind+2) == argc ) {
+
         address = argv[optind];
         port    = (uint16_t)strtol((const char *)argv[optind+1], NULL, 0);
+
     } else {
+
         show_useage(argc,argv);
         exit(0);
     }
@@ -292,38 +271,39 @@ int main (int argc,char *argv[]){
         exit(0);
     }
 
-    #ifdef __UNIX_LIKE_OS__
-    if ( udp_over_tcp_service_conf->daemon ) {
-        gnb_daemon();
-    }
-    #endif
+
+    gnb_log_ctx_t *log;
 
     log = gnb_log_ctx_create();
 
-    if ( 0 == udp_over_tcp_service_conf->daemon && 1==verbose_opt ) {
-        log_console_level = 3;
-        log_udp_level     = 3;
-    }
+    setup_log_ctx(log, log_path, log_udp_sockaddress4_string, log_console_level, log_file_level, log_udp_level);
 
-    setup_log_ctx(udp_over_tcp_service_conf, log, log_path, log_udp_sockaddress4_string, log_console_level, log_file_level, log_udp_level);
+    gnb_network_service_t *service;
 
-    if ( 0 != udp_opt ) {
+    if ( 0!=udp_opt ) {
+
         udp_over_tcp_service_conf->tcp_address = address;
         udp_over_tcp_service_conf->tcp_port    = port;
+
         service = gnb_network_service_create(&uot_udp_service_mod, log, 1024);
         gnb_network_service_init(service, udp_over_tcp_service_conf);
+
     }
 
-    if ( 0 != tcp_opt ) {
+    if ( 0!=tcp_opt ) {
+
         udp_over_tcp_service_conf->des_udp_address = address;
         udp_over_tcp_service_conf->des_udp_port    = port;
+
         service = gnb_network_service_create(&uot_tcp_service_mod, log, 1024);
         gnb_network_service_init(service, udp_over_tcp_service_conf);
+
     }
 
     GNB_LOG1(service->log, GNB_LOG_ID_UOT, "log init.\n");
 
     gnb_network_service_listen(service);
+
     gnb_network_service_loop(service);
 
     return 0;

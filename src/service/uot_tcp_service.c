@@ -102,6 +102,7 @@ static int service_accept_cb(gnb_network_service_t *service, gnb_connection_t *c
     channel->tcp_conn = conn;
 
     channel->udp_conn = gnb_connection_create(service);
+
     channel->udp_conn->remote_sockaddress = uot_table->remote_udp_sockaddress;
 
     gnb_network_service_udp_channel(service, channel->udp_conn);
@@ -338,6 +339,7 @@ static int service_close_cb(gnb_network_service_t *service, gnb_connection_t *co
     gnb_connection_close(service, channel->udp_conn);
 
     gnb_connection_release(service, channel->udp_conn);
+
     gnb_connection_release(service, conn);
 
     free(channel->gnb_payload16_ctx);

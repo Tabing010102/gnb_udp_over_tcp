@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#include "gnb_platform.h"
 #include "gnb_payload16.h"
 
 #define UTO_MAX_TCP_PAYLOAD_SIZE 4096
@@ -15,11 +14,7 @@ typedef struct _udp_over_tcp_service_conf_t{
 	int tcp;
 	int udp;
 
-	uint16_t listen_port;
-
-    #ifdef __UNIX_LIKE_OS__
-	uint8_t daemon;
-    #endif
+	uint16_t  listen_port;
 
 	char     *tcp_address;
 	uint16_t  tcp_port;
